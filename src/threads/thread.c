@@ -236,6 +236,9 @@ static void thread_enqueue(struct thread* t) {
 
   if (active_sched_policy == SCHED_FIFO)
     list_push_back(&fifo_ready_list, &t->elem);
+  else if (active_sched_policy == SCHED_PRIO)
+    //优先级调度，有序插入
+    list_insert_ordered(&fifo_ready_list, &t->elem, (list_less_func *) &thread_cmp_priority, NULL);
   else
     PANIC("Unimplemented scheduling policy value: %d", active_sched_policy);
 }
@@ -255,7 +258,10 @@ void thread_unblock(struct thread* t) {
 
   old_level = intr_disable();
   ASSERT(t->status == THREAD_BLOCKED);
+
+  // list_insert_ordered (&fifo_ready_list, &t->elem, (list_less_func *) &thread_cmp_priority, NULL);
   thread_enqueue(t);
+
   t->status = THREAD_READY;
   intr_set_level(old_level);
 }
@@ -309,6 +315,7 @@ void thread_yield(void) {
   old_level = intr_disable();
   if (cur != idle_thread)
     thread_enqueue(cur);
+    // list_insert_ordered (&fifo_ready_list, &cur->elem, (list_less_func *) &thread_cmp_priority, NULL);
   cur->status = THREAD_READY;
   schedule();
   intr_set_level(old_level);
@@ -432,8 +439,10 @@ static void init_thread(struct thread* t, const char* name, int priority) {
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable();
-  list_push_back(&all_list, &t->allelem);
+  list_insert_ordered (&all_list, &t->allelem, (list_less_func *) &thread_cmp_priority, NULL);
   intr_set_level(old_level);
+  //新增
+  t->ticks_blocked = 0;//初始化为0
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -457,7 +466,11 @@ static struct thread* thread_schedule_fifo(void) {
 
 /* Strict priority scheduler */
 static struct thread* thread_schedule_prio(void) {
-  PANIC("Unimplemented scheduler policy: \"-sched=prio\"");
+  if (!list_empty(&fifo_ready_list))
+    return list_entry(list_pop_front(&fifo_ready_list), struct thread, elem);
+  else
+    return idle_thread;
+  //PANIC("Unimplemented scheduler policy: \"-sched=prio\"");
 }
 
 /* Fair priority scheduler */
@@ -564,3 +577,22 @@ static tid_t allocate_tid(void) {
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof(struct thread, stack);
+
+// 新增
+void check_blocked_thread(struct thread *t, void *aux UNUSED)
+{
+  if (t->status == THREAD_BLOCKED && t->ticks_blocked > 0)
+  {
+      t->ticks_blocked--;
+      if (t->ticks_blocked == 0)
+      {
+          thread_unblock(t);
+      }
+  }
+}
+
+/* priority compare function. */
+bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
+}

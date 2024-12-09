@@ -100,6 +100,12 @@ struct thread {
 
   /* Owned by thread.c. */
   unsigned magic; /* Detects stack overflow. */
+  
+  //新增 
+  int64_t ticks_blocked;
+  int base_priority;             /* 优先级 */
+  struct list locks;            /* 当前进程持有的锁*/
+  struct lock *lock_waiting;   /* 当前进程正在被什么锁阻碍 */
 };
 
 /* Types of scheduler that the user can request the kernel
@@ -149,4 +155,6 @@ void thread_set_nice(int);
 int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
 
+void check_blocked_thread(struct thread *t, void *aux UNUSED);
+bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 #endif /* threads/thread.h */

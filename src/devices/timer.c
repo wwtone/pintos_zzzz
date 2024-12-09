@@ -75,12 +75,20 @@ int64_t timer_elapsed(int64_t then) { return timer_ticks() - then; }
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
-void timer_sleep(int64_t ticks) {
-  int64_t start = timer_ticks();
 
-  ASSERT(intr_get_level() == INTR_ON);
-  while (timer_elapsed(start) < ticks)
-    thread_yield();
+// 修改
+void timer_sleep (int64_t ticks)
+{
+  if (ticks <= 0)//检测ticks是否有效
+  {
+    return;
+  }
+  ASSERT (intr_get_level () == INTR_ON);
+  enum intr_level old_level = intr_disable ();
+  struct thread *current_thread = thread_current ();
+  current_thread->ticks_blocked = ticks;//当前线程睡眠的时间
+  thread_block ();//进程阻塞
+  intr_set_level (old_level);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -129,6 +137,8 @@ void timer_print_stats(void) { printf("Timer: %" PRId64 " ticks\n", timer_ticks(
 static void timer_interrupt(struct intr_frame* args UNUSED) {
   ticks++;
   thread_tick();
+  /*新增 thread_foreach (check_blocked_thread, NULL);这句话*/
+  thread_foreach (check_blocked_thread, NULL);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
