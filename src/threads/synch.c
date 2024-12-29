@@ -35,10 +35,11 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
-static bool priority_less(const struct list_elem* a_, const struct list_elem* b_,
+static bool priority_less(const struct list_elem* wwta_, const struct list_elem* wwtb_,
                           void* aux UNUSED) {
-  const struct thread_donation* a = list_entry(a_, struct thread_donation, elem);
-  const struct thread_donation* b = list_entry(b_, struct thread_donation, elem);
+
+  const struct thread_donation* b = list_entry(wwtb_, struct thread_donation, elem);
+  const struct thread_donation* a = list_entry(wwta_, struct thread_donation, elem);
 
   return a->priority < b->priority;
 }

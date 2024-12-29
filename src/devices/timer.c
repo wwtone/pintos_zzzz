@@ -77,16 +77,16 @@ int64_t timer_elapsed(int64_t then) { return timer_ticks() - then; }
    be turned on. */
 
 // 修改
-void timer_sleep (int64_t ticks)
+void timer_sleep (int64_t wwt_ticks)
 {
-  if (ticks <= 0)//检测ticks是否有效
+  if (wwt_ticks <= 0)//检测ticks是否有效
   {
     return;
   }
   ASSERT (intr_get_level () == INTR_ON);
   enum intr_level old_level = intr_disable ();
   struct thread *current_thread = thread_current ();
-  current_thread->ticks_blocked = ticks;//当前线程睡眠的时间
+  current_thread->ticks_blocked = wwt_ticks;//当前线程睡眠的时间
   thread_block ();//进程阻塞
   intr_set_level (old_level);
 }
